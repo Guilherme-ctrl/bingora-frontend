@@ -4,7 +4,7 @@ import { Callout } from '@/components/ui/Callout';
 import { AuthLayout } from '@/layout/AuthLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { isMockApiMode } from '@/services/config';
-import { ApiRequestError } from '@/services/apiError';
+import { ApiRequestError, userFacingApiMessage } from '@/services/apiError';
 import { loginSchema } from '@/validation/authAndEvents';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -50,7 +50,7 @@ export function LoginPage() {
       if (err instanceof ApiRequestError && err.status === 401) {
         setFormError('E-mail ou senha inválidos.');
       } else if (err instanceof ApiRequestError) {
-        setFormError(err.message);
+        setFormError(userFacingApiMessage(err));
       } else {
         setFormError(
           'Não foi possível entrar. Verifique a conexão e tente de novo.',

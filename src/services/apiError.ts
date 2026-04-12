@@ -19,6 +19,14 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** User-facing copy when the API returns HTTP 429 (rate limit). */
+export function userFacingApiMessage(err: ApiRequestError): string {
+  if (err.status === 429) {
+    return 'Muitas tentativas. Aguarde um minuto e tente de novo.';
+  }
+  return err.message;
+}
+
 export async function parseErrorResponse(res: Response): Promise<ApiRequestError> {
   let message = res.statusText || 'Request failed';
   let code: string | undefined;

@@ -4,7 +4,7 @@ import { Callout } from '@/components/ui/Callout';
 import { AuthLayout } from '@/layout/AuthLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { loginSchema } from '@/validation/authAndEvents';
-import { ApiRequestError } from '@/services/apiError';
+import { ApiRequestError, userFacingApiMessage } from '@/services/apiError';
 import { isMockApiMode } from '@/services/config';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -44,7 +44,7 @@ export function RegisterPage() {
       navigate('/events', { replace: true });
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setFormError(err.message);
+        setFormError(userFacingApiMessage(err));
       } else {
         setFormError('Não foi possível criar a conta.');
       }

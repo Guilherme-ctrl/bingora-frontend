@@ -14,6 +14,9 @@ export default defineConfig({
     },
   },
   server: {
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
