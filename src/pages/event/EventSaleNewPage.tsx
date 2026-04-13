@@ -11,6 +11,7 @@ import * as roundsService from '@/services/roundsService';
 import * as salesService from '@/services/salesService';
 import type { Participant, Round } from '@/types/api';
 import { ApiRequestError } from '@/services/apiError';
+import { trackCriticalUiFlow } from '@/services/sentryObservability';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -113,18 +114,31 @@ export function EventSaleNewPage() {
     }
     setSaving(true);
     try {
-      const sale = await salesService.createSale(event.id, {
-        ...(anonymousSale ? { participant_id: null } : { participant_id: participantId }),
-        quantity: q,
-        payment_status: paymentStatus,
-        unit_price_cents: cents,
-        currency,
-        notes: notes.trim() === '' ? null : notes,
-        ...(explicitSerials.length > 0
-          ? { serial_numbers: explicitSerials }
-          : {}),
-      });
-      navigate(`${base}/sales/${sale.id}`, { replace: true });
+      await trackCriticalUiFlow(
+        'sale.create',
+        {
+          event_id: event.id,
+          round_id: activeRound?.id ?? '',
+          quantity: q,
+          anonymous: anonymousSale,
+        },
+        async () => {
+          const sale = await salesService.createSale(event.id, {
+            ...(anonymousSale
+              ? { participant_id: null }
+              : { participant_id: participantId }),
+            quantity: q,
+            payment_status: paymentStatus,
+            unit_price_cents: cents,
+            currency,
+            notes: notes.trim() === '' ? null : notes,
+            ...(explicitSerials.length > 0
+              ? { serial_numbers: explicitSerials }
+              : {}),
+          });
+          navigate(`${base}/sales/${sale.id}`, { replace: true });
+        },
+      );
     } catch (err) {
       setFormError(
         err instanceof ApiRequestError

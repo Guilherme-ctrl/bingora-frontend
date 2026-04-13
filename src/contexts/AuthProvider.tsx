@@ -1,6 +1,7 @@
 import { AuthContext, type AuthState } from '@/contexts/auth-context';
 import * as authService from '@/services/authService';
 import { getStoredAccessToken } from '@/services/tokenStorage';
+import { ApiRequestError } from '@/services/apiError';
 import { captureUnexpectedError, setSentryUser } from '@/services/sentry';
 import type { OrganizerProfile } from '@/types/api';
 import {
@@ -57,7 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.organizer);
       setSentryUser(res.organizer);
     } catch (error) {
-      captureUnexpectedError(error, 'auth_login');
+      if (
+        !(error instanceof ApiRequestError) ||
+        error.status >= 500
+      ) {
+        captureUnexpectedError(error, 'auth_login');
+      }
       throw error;
     }
   }, []);
@@ -68,7 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.organizer);
       setSentryUser(res.organizer);
     } catch (error) {
-      captureUnexpectedError(error, 'auth_register');
+      if (
+        !(error instanceof ApiRequestError) ||
+        error.status >= 500
+      ) {
+        captureUnexpectedError(error, 'auth_register');
+      }
       throw error;
     }
   }, []);

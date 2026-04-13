@@ -7,6 +7,7 @@ import * as drawService from '@/services/drawService';
 import * as roundsService from '@/services/roundsService';
 import type { DrawSessionStatus, DrawState, Round } from '@/types/api';
 import { ApiRequestError } from '@/services/apiError';
+import { trackCriticalUiFlow } from '@/services/sentryObservability';
 import { useCallback, useEffect, useState } from 'react';
 
 const SESSION_STATUS_PT: Record<DrawSessionStatus, string> = {
@@ -92,9 +93,15 @@ export function EventDrawPage() {
         window.alert('A rodada precisa estar em EM_SORTEIO para registrar chamadas.');
         return;
       }
-      await drawService.postCallInRound(round.id, { ball_number: n });
-      setBallInput('');
-      await load();
+      await trackCriticalUiFlow(
+        'draw.post_call',
+        { event_id: event.id, round_id: round.id, ball_number: n },
+        async () => {
+          await drawService.postCallInRound(round.id, { ball_number: n });
+          setBallInput('');
+          await load();
+        },
+      );
     } catch (err) {
       window.alert(
         err instanceof ApiRequestError
