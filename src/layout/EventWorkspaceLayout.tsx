@@ -169,6 +169,12 @@ export function EventWorkspaceLayout() {
           )}
         </div>
 
+        {!isSeller ? (
+          <Callout tone="info" title="Fluxo recomendado">
+            Rodada → Vendas → Sorteio → Ganhadores.
+          </Callout>
+        ) : null}
+
         <nav className="event-subnav" aria-label="Seções do evento">
           {isSeller ? (
             <>
@@ -179,14 +185,15 @@ export function EventWorkspaceLayout() {
           ) : (
             <>
               {sub(base, 'Visão geral', true)}
-              {isOwner ? sub(`${base}/vendedores`, 'Vendedores') : null}
-              {sub(`${base}/prizes`, 'Prêmios')}
-              {sub(`${base}/cards`, 'Cartelas')}
-              {sub(`${base}/participants`, 'Participantes')}
+              {sub(`${base}/rodada`, 'Rodada')}
               {sub(`${base}/sales`, 'Vendas')}
-              {sub(`${base}/finance`, 'Financeiro')}
               {sub(`${base}/draw`, 'Sorteio')}
               {sub(`${base}/winners`, 'Ganhadores')}
+              {sub(`${base}/participants`, 'Participantes')}
+              {sub(`${base}/finance`, 'Financeiro')}
+              {sub(`${base}/prizes`, 'Prêmios')}
+              {sub(`${base}/cards`, 'Cartelas')}
+              {isOwner ? sub(`${base}/vendedores`, 'Vendedores') : null}
             </>
           )}
         </nav>

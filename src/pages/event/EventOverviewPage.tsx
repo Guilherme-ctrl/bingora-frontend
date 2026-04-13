@@ -11,6 +11,11 @@ export function EventOverviewPage() {
   const tiles = [
     { to: `${base}/prizes`, title: 'Prêmios', desc: 'Defina o que pode ser ganho.' },
     {
+      to: `${base}/rodada`,
+      title: 'Rodada',
+      desc: 'Controle o estado operacional e checkpoints da mesa.',
+    },
+    {
       to: `${base}/cards`,
       title: 'Cartelas',
       desc: 'Gere cartelas únicas para impressão.',

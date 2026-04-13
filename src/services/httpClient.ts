@@ -57,7 +57,12 @@ export async function apiRequest<T>(
     return undefined as T;
   }
 
-  return (await res.json()) as T;
+  const raw = await res.text();
+  if (raw.trim().length === 0) {
+    return undefined as T;
+  }
+
+  return JSON.parse(raw) as T;
 }
 
 /** Upload multipart (ex.: logo); não define Content-Type (boundary automático). */

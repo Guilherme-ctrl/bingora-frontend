@@ -21,6 +21,16 @@ export async function postCall(
   });
 }
 
+export async function postCallInRound(
+  roundId: string,
+  body: PostCallBody,
+): Promise<DrawCall> {
+  return apiRequest<DrawCall>(`/rounds/${roundId}/draw/calls`, {
+    method: 'POST',
+    body,
+  });
+}
+
 export async function deleteLastCall(eventId: string): Promise<void> {
   await apiRequest<void>(`/events/${eventId}/draw/calls/last`, {
     method: 'DELETE',
@@ -30,5 +40,16 @@ export async function deleteLastCall(eventId: string): Promise<void> {
 export async function closeDrawSession(eventId: string): Promise<DrawSession> {
   return apiRequest<DrawSession>(`/events/${eventId}/draw/close`, {
     method: 'POST',
+  });
+}
+
+export async function invalidateCallInRound(
+  roundId: string,
+  callId: string,
+  reason: string,
+): Promise<void> {
+  await apiRequest<void>(`/rounds/${roundId}/draw/calls/${callId}/invalidate`, {
+    method: 'POST',
+    body: { reason },
   });
 }

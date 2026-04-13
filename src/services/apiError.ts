@@ -43,5 +43,15 @@ export async function parseErrorResponse(res: Response): Promise<ApiRequestError
     /* non-JSON */
   }
 
+  if (!code) {
+    if (res.status === 502) {
+      message =
+        'Não foi possível conectar ao backend. Verifique se o backend local está em execução na porta 3000.';
+    } else if (res.status === 503 || res.status === 504) {
+      message =
+        'Serviço indisponível no momento. Tente novamente em instantes.';
+    }
+  }
+
   return new ApiRequestError(message, res.status, code, details);
 }

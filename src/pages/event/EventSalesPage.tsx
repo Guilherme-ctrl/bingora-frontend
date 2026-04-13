@@ -114,7 +114,11 @@ export function EventSalesPage() {
             <tbody>
               {sales.map((s) => (
                 <tr key={s.id}>
-                  <td>{nameById.get(s.participant_id) ?? s.participant_id}</td>
+                  <td>
+                    {s.participant_id
+                      ? (nameById.get(s.participant_id) ?? s.participant_id)
+                      : 'Anônimo'}
+                  </td>
                   <td>{s.quantity}</td>
                   <td>
                     <PaymentStatusBadge status={s.payment_status} />

@@ -6,8 +6,9 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useEventWorkspace } from '@/hooks/useEventWorkspace';
 import * as participantsService from '@/services/participantsService';
+import * as roundsService from '@/services/roundsService';
 import * as salesService from '@/services/salesService';
-import type { Participant } from '@/types/api';
+import type { Participant, Round } from '@/types/api';
 import { ApiRequestError } from '@/services/apiError';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -22,11 +23,13 @@ export function EventSellerDeskPage() {
   const base = `/events/${event.id}`;
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [activeRound, setActiveRound] = useState<Round | null>(null);
 
   const [mode, setMode] = useState<FlowMode>('novo');
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [participantId, setParticipantId] = useState('');
+  const [anonymousSale, setAnonymousSale] = useState(false);
 
   const [quantity, setQuantity] = useState('1');
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid'>('unpaid');
@@ -44,7 +47,9 @@ export function EventSellerDeskPage() {
         page: 1,
         page_size: 100,
       });
+      const round = await roundsService.getActiveRound(event.id);
       setParticipants(res.items);
+      setActiveRound(round);
     } catch (e) {
       setLoadErr(
         e instanceof ApiRequestError
@@ -113,15 +118,19 @@ export function EventSellerDeskPage() {
       setFormError('Informe uma quantidade válida (mínimo 1) ou escolha cartelas.');
       return;
     }
+    if (activeRound?.status !== 'EM_VENDA') {
+      setFormError('A rodada precisa estar em EM_VENDA para registrar vendas.');
+      return;
+    }
 
-    let pid = participantId;
-    if (mode === 'novo') {
+    let pid: string | null = participantId;
+    if (!anonymousSale && mode === 'novo') {
       const dn = displayName.trim();
       if (dn.length < 2) {
         setFormError('Informe o nome do comprador (pelo menos 2 caracteres).');
         return;
       }
-    } else if (!participantId) {
+    } else if (!anonymousSale && !participantId) {
       setFormError('Escolha um participante da lista.');
       return;
     }
@@ -145,7 +154,7 @@ export function EventSellerDeskPage() {
 
     setSaving(true);
     try {
-      if (mode === 'novo') {
+      if (!anonymousSale && mode === 'novo') {
         const created = await participantsService.createParticipant(event.id, {
           display_name: displayName.trim(),
           phone: phone.trim() === '' ? null : phone.trim(),
@@ -157,7 +166,7 @@ export function EventSellerDeskPage() {
       }
 
       await salesService.createSale(event.id, {
-        participant_id: pid,
+        participant_id: anonymousSale ? null : pid,
         quantity: q,
         payment_status: paymentStatus,
         unit_price_cents: cents,
@@ -170,6 +179,7 @@ export function EventSellerDeskPage() {
 
       setSuccessMsg('Venda registrada. Pronto para o próximo.');
       resetForNextCustomer();
+      setAnonymousSale(false);
     } catch (err) {
       setFormError(
         err instanceof ApiRequestError
@@ -205,6 +215,11 @@ export function EventSellerDeskPage() {
           {loadErr}
         </Callout>
       ) : null}
+      {activeRound?.status !== 'EM_VENDA' ? (
+        <Callout tone="info" title="Vendas bloqueadas pela rodada">
+          Vá em <strong>Rodada</strong> e coloque em <strong>EM_VENDA</strong>.
+        </Callout>
+      ) : null}
 
       {successMsg ? (
         <Callout tone="info" title="Ok">
@@ -219,6 +234,14 @@ export function EventSellerDeskPage() {
       ) : null}
 
       <form className="seller-desk__form" onSubmit={onSubmit}>
+        <label className="field-label" style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={anonymousSale}
+            onChange={(ev) => setAnonymousSale(ev.target.checked)}
+          />
+          Venda anônima (sem participante)
+        </label>
         <div className="seller-desk__mode-toggle" role="group" aria-label="Modo">
           <button
             type="button"
@@ -242,7 +265,7 @@ export function EventSellerDeskPage() {
           </button>
         </div>
 
-        {mode === 'novo' ? (
+        {!anonymousSale && mode === 'novo' ? (
           <div className="seller-desk__grid-2">
             <TextField
               id="seller-desk-name"
@@ -261,7 +284,7 @@ export function EventSellerDeskPage() {
               autoComplete="tel"
             />
           </div>
-        ) : (
+        ) : !anonymousSale ? (
           <SelectField
             label="Participante"
             name="participant_id"
@@ -275,7 +298,7 @@ export function EventSellerDeskPage() {
                 : undefined
             }
           />
-        )}
+        ) : null}
 
         <div className="seller-desk__grid-3">
           <TextField
@@ -335,7 +358,10 @@ export function EventSellerDeskPage() {
             variant="primary"
             loading={saving}
             className="seller-desk__submit"
-            disabled={mode === 'existente' && pOptions.length === 0}
+            disabled={
+              (mode === 'existente' && pOptions.length === 0) ||
+              activeRound?.status !== 'EM_VENDA'
+            }
           >
             Registrar venda
           </Button>

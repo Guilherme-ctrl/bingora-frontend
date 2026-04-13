@@ -4,7 +4,8 @@ import { PageContainer, PageHeader } from '@/components/ui/PageContainer';
 import { TextField } from '@/components/ui/TextField';
 import { useEventWorkspace } from '@/hooks/useEventWorkspace';
 import * as drawService from '@/services/drawService';
-import type { DrawSessionStatus, DrawState } from '@/types/api';
+import * as roundsService from '@/services/roundsService';
+import type { DrawSessionStatus, DrawState, Round } from '@/types/api';
 import { ApiRequestError } from '@/services/apiError';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -19,6 +20,7 @@ export function EventDrawPage() {
     event.status === 'scheduled' || event.status === 'in_progress';
 
   const [state, setState] = useState<DrawState | null>(null);
+  const [round, setRound] = useState<Round | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ballInput, setBallInput] = useState('');
@@ -28,8 +30,12 @@ export function EventDrawPage() {
     setLoading(true);
     setError(null);
     try {
-      const s = await drawService.getDrawState(event.id);
+      const [s, activeRound] = await Promise.all([
+        drawService.getDrawState(event.id),
+        roundsService.getActiveRound(event.id),
+      ]);
       setState(s);
+      setRound(activeRound);
     } catch (e) {
       setError(
         e instanceof ApiRequestError
@@ -48,7 +54,11 @@ export function EventDrawPage() {
   const session = state?.session ?? null;
   const calls = state?.calls ?? [];
   const remaining = state?.remaining_numbers;
-  const calledSet = new Set(calls.map((c) => c.ball_number));
+  const calledSet = new Set(
+    calls
+      .filter((c) => (c.status ?? 'active') === 'active')
+      .map((c) => c.ball_number),
+  );
 
   async function startSession() {
     setBusy(true);
@@ -78,7 +88,11 @@ export function EventDrawPage() {
     }
     setBusy(true);
     try {
-      await drawService.postCall(event.id, { ball_number: n });
+      if (round?.status !== 'EM_SORTEIO') {
+        window.alert('A rodada precisa estar em EM_SORTEIO para registrar chamadas.');
+        return;
+      }
+      await drawService.postCallInRound(round.id, { ball_number: n });
       setBallInput('');
       await load();
     } catch (err) {
@@ -93,12 +107,26 @@ export function EventDrawPage() {
   }
 
   async function undoLast() {
-    if (!window.confirm('Remover a última chamada?')) {
+    if (!window.confirm('Invalidar a última chamada?')) {
+      return;
+    }
+    if (!round) {
       return;
     }
     setBusy(true);
     try {
-      await drawService.deleteLastCall(event.id);
+      const lastActive = [...calls]
+        .reverse()
+        .find((c) => (c.status ?? 'active') === 'active');
+      if (!lastActive?.id) {
+        window.alert('Não há chamada ativa para invalidar.');
+        return;
+      }
+      await drawService.invalidateCallInRound(
+        round.id,
+        lastActive.id,
+        'Correção operacional',
+      );
       await load();
     } catch (err) {
       window.alert(
@@ -136,13 +164,29 @@ export function EventDrawPage() {
 
   const lastCall = calls.length ? calls[calls.length - 1] : null;
   const open = session?.status === 'open';
+  const roundInDraw = round?.status === 'EM_SORTEIO';
 
   return (
     <PageContainer>
       <PageHeader
         title="Sorteio"
-        description="Registre os números conforme forem sorteados. Duplicatas são bloqueadas pelo servidor e destacadas aqui."
+        description="Registre números na rodada em EM_SORTEIO. Correções devem ser por invalidação auditável."
       />
+      {round ? (
+        <Callout
+          tone={roundInDraw ? 'info' : 'error'}
+          title={`Rodada ${round.code} (${round.status})`}
+        >
+          {roundInDraw
+            ? 'Rodada liberada para roletagem.'
+            : 'A rodada não está em EM_SORTEIO. Vá em Rodada para avançar o estado.'}
+        </Callout>
+      ) : (
+        <Callout tone="error" title="Sem rodada ativa">
+          Crie uma rodada e avance o fluxo operacional antes de sortear.
+        </Callout>
+      )}
+
 
       {!drawable ? (
         <Callout tone="error" title="Evento não pronto">
@@ -189,7 +233,7 @@ export function EventDrawPage() {
             </div>
           </div>
 
-          {open ? (
+          {open && roundInDraw ? (
             <form className="form-stack draw-form" onSubmit={submitCall}>
               <TextField
                 label="Próxima bola (1–75)"
@@ -209,7 +253,7 @@ export function EventDrawPage() {
                   disabled={calls.length === 0 || busy}
                   onClick={() => void undoLast()}
                 >
-                  Desfazer última
+                  Invalidar última
                 </Button>
                 <Button type="button" variant="secondary" disabled={busy} onClick={closeDraw}>
                   Encerrar sorteio
@@ -218,7 +262,7 @@ export function EventDrawPage() {
             </form>
           ) : (
             <Callout tone="info" title="Sorteio encerrado">
-              O histórico abaixo é somente leitura.
+              O histórico abaixo é somente leitura ou a rodada ainda não foi liberada.
             </Callout>
           )}
 
@@ -230,6 +274,9 @@ export function EventDrawPage() {
               <li key={`${c.sequence}-${c.ball_number}`}>
                 <span className="call-list__seq">#{c.sequence}</span>
                 <span className="call-list__ball">{c.ball_number}</span>
+                {(c.status ?? 'active') === 'invalidated' ? (
+                  <span className="call-list__seq"> invalidada</span>
+                ) : null}
               </li>
             ))}
           </ol>

@@ -14,6 +14,15 @@ export type PaymentStatus = 'unpaid' | 'paid';
 export type SaleStatus = 'active' | 'voided';
 
 export type DrawSessionStatus = 'open' | 'closed';
+export type DrawCallStatus = 'active' | 'invalidated';
+export type RoundStatus =
+  | 'CRIADA'
+  | 'EM_VENDA'
+  | 'AGUARDANDO_CONFERENCIA'
+  | 'EM_SORTEIO'
+  | 'FINALIZADA';
+export type RoundType = 'binguinho' | 'roda_da_fortuna' | 'bingao';
+export type SellerReconciliationStatus = 'CONFERIDO' | 'DIVERGENTE';
 
 /** Alinhado ao enum Prisma `OrganizerRole`. */
 export type OrganizerRole = 'admin' | 'member' | 'seller';
@@ -169,7 +178,9 @@ export type SaleCardLine = {
 export type Sale = {
   id: string;
   event_id: string;
-  participant_id: string;
+  round_id: string | null;
+  seller_organizer_id: string | null;
+  participant_id: string | null;
   quantity: number;
   payment_status: PaymentStatus;
   unit_price_cents: number | null;
@@ -184,7 +195,7 @@ export type Sale = {
 export type SaleSummary = Omit<Sale, 'cards'>;
 
 export type CreateSaleBody = {
-  participant_id: string;
+  participant_id?: string | null;
   quantity: number;
   payment_status: PaymentStatus;
   unit_price_cents?: number | null;
@@ -239,12 +250,19 @@ export type DrawCall = {
   ball_number: number;
   called_at: string;
   note: string | null;
+  status?: DrawCallStatus;
+  invalidated_at?: string | null;
+  invalidation_reason?: string | null;
 };
 
 export type DrawCallSummary = {
+  id?: string;
   sequence: number;
   ball_number: number;
   called_at: string;
+  status?: DrawCallStatus;
+  invalidated_at?: string | null;
+  invalidation_reason?: string | null;
 };
 
 export type DrawState = {
@@ -256,6 +274,35 @@ export type DrawState = {
 export type PostCallBody = {
   ball_number: number;
   note?: string | null;
+};
+
+export type Round = {
+  id: string;
+  eventId: string;
+  code: string;
+  type: RoundType;
+  status: RoundStatus;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+};
+
+export type CreateRoundBody = {
+  code: string;
+  type: RoundType;
+};
+
+export type SellerReconciliationRow = {
+  seller_organizer_id: string;
+  seller_email: string;
+  status: SellerReconciliationStatus | null;
+  justification: string | null;
+  updated_at: string | null;
+};
+
+export type SellerReconciliationList = {
+  round_id: string;
+  items: SellerReconciliationRow[];
 };
 
 export type Winner = {

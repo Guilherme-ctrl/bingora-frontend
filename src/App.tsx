@@ -15,6 +15,7 @@ import { EventDrawPage } from '@/pages/event/EventDrawPage';
 import { EventEditPage } from '@/pages/event/EventEditPage';
 import { EventParticipantsPage } from '@/pages/event/EventParticipantsPage';
 import { EventPrizesPage } from '@/pages/event/EventPrizesPage';
+import { EventRoundPage } from '@/pages/event/EventRoundPage';
 import { EventSaleDetailPage } from '@/pages/event/EventSaleDetailPage';
 import { EventSaleNewPage } from '@/pages/event/EventSaleNewPage';
 import { EventSalesPage } from '@/pages/event/EventSalesPage';
@@ -61,6 +62,14 @@ export default function App() {
                   element={
                     <NonSellerRoute>
                       <EventEditPage />
+                    </NonSellerRoute>
+                  }
+                />
+                <Route
+                  path="rodada"
+                  element={
+                    <NonSellerRoute>
+                      <EventRoundPage />
                     </NonSellerRoute>
                   }
                 />
