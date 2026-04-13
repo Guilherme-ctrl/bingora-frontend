@@ -1,6 +1,7 @@
 import { AuthContext, type AuthState } from '@/contexts/auth-context';
 import * as authService from '@/services/authService';
 import { getStoredAccessToken } from '@/services/tokenStorage';
+import { captureUnexpectedError, setSentryUser } from '@/services/sentry';
 import type { OrganizerProfile } from '@/types/api';
 import {
   useCallback,
@@ -26,8 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await authService.fetchMe();
       setUser(profile);
+      setSentryUser(profile);
     } catch {
       setUser(null);
+      setSentryUser(null);
     } finally {
       setLoading(false);
     }
@@ -40,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onUnauthorized = () => {
       setUser(null);
+      setSentryUser(null);
       navigate('/login', { replace: true });
     };
     window.addEventListener('bingo:auth-unauthorized', onUnauthorized);
@@ -48,18 +52,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await authService.login(email, password);
-    setUser(res.organizer);
+    try {
+      const res = await authService.login(email, password);
+      setUser(res.organizer);
+      setSentryUser(res.organizer);
+    } catch (error) {
+      captureUnexpectedError(error, 'auth_login');
+      throw error;
+    }
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
-    const res = await authService.register(email, password);
-    setUser(res.organizer);
+    try {
+      const res = await authService.register(email, password);
+      setUser(res.organizer);
+      setSentryUser(res.organizer);
+    } catch (error) {
+      captureUnexpectedError(error, 'auth_register');
+      throw error;
+    }
   }, []);
 
   const logout = useCallback(async () => {
     await authService.logout();
     setUser(null);
+    setSentryUser(null);
     navigate('/login', { replace: true });
   }, [navigate]);
 

@@ -1,5 +1,6 @@
 import { ApiRequestError, parseErrorResponse } from '@/services/apiError';
 import { getApiBaseUrl } from '@/services/config';
+import { Sentry, captureUnexpectedError } from '@/services/sentry';
 import { getStoredAccessToken, setStoredAccessToken } from '@/services/tokenStorage';
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -37,20 +38,40 @@ export async function apiRequest<T>(
     }
   }
 
-  const res = await fetch(url, {
-    method: options.method ?? 'GET',
-    headers,
-    body:
-      options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: options.method ?? 'GET',
+      headers,
+      body:
+        options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+  } catch (error) {
+    captureUnexpectedError(error, 'http_api_network_error');
+    throw error;
+  }
 
   if (res.status === 401) {
     dispatchUnauthorized();
   }
 
   if (!res.ok) {
-    throw await parseErrorResponse(res);
+    const parsedError = await parseErrorResponse(res);
+    Sentry.addBreadcrumb({
+      category: 'http',
+      level: 'error',
+      message: `${options.method ?? 'GET'} ${path} -> ${res.status}`,
+      data: {
+        path,
+        status: res.status,
+        request_id: res.headers.get('x-request-id') ?? undefined,
+      },
+    });
+    if (res.status >= 500) {
+      captureUnexpectedError(parsedError, 'http_api_request');
+    }
+    throw parsedError;
   }
 
   if (res.status === 204) {
@@ -62,6 +83,16 @@ export async function apiRequest<T>(
     return undefined as T;
   }
 
+  Sentry.addBreadcrumb({
+    category: 'http',
+    level: 'info',
+    message: `${options.method ?? 'GET'} ${path} -> ${res.status}`,
+    data: {
+      path,
+      status: res.status,
+      request_id: res.headers.get('x-request-id') ?? undefined,
+    },
+  });
   return JSON.parse(raw) as T;
 }
 
@@ -80,17 +111,27 @@ export async function apiRequestFormData<T>(
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(url, {
-    method: options.method ?? 'POST',
-    headers,
-    body: formData,
-    signal: options.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: options.method ?? 'POST',
+      headers,
+      body: formData,
+      signal: options.signal,
+    });
+  } catch (error) {
+    captureUnexpectedError(error, 'http_form_data_network_error');
+    throw error;
+  }
   if (res.status === 401) {
     dispatchUnauthorized();
   }
   if (!res.ok) {
-    throw await parseErrorResponse(res);
+    const parsedError = await parseErrorResponse(res);
+    if (res.status >= 500) {
+      captureUnexpectedError(parsedError, 'http_api_request_form_data');
+    }
+    throw parsedError;
   }
   return (await res.json()) as T;
 }
@@ -110,18 +151,28 @@ export async function apiRequestText(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    method: 'GET',
-    headers,
-    signal: options.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: options.signal,
+    });
+  } catch (error) {
+    captureUnexpectedError(error, 'http_text_network_error');
+    throw error;
+  }
 
   if (res.status === 401) {
     dispatchUnauthorized();
   }
 
   if (!res.ok) {
-    throw await parseErrorResponse(res);
+    const parsedError = await parseErrorResponse(res);
+    if (res.status >= 500) {
+      captureUnexpectedError(parsedError, 'http_api_request_text');
+    }
+    throw parsedError;
   }
 
   return res.text();

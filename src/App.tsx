@@ -24,104 +24,107 @@ import { EventSellersManagePage } from '@/pages/event/EventSellersManagePage';
 import { EventWinnersPage } from '@/pages/event/EventWinnersPage';
 import { HomeRoute } from '@/routes/HomeRoute';
 import { RequireAuth } from '@/routes/RequireAuth';
+import { Sentry } from '@/services/sentry';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/" element={<HomeRoute />} />
-          <Route element={<RequireAuth />}>
-            <Route element={<AppShell />}>
-              <Route path="events" element={<EventsDashboardPage />} />
-              <Route
-                path="events/new"
-                element={
-                  <NonSellerRoute>
-                    <CreateEventPage />
-                  </NonSellerRoute>
-                }
-              />
-              <Route path="events/:eventId" element={<EventWorkspaceRoute />}>
-                <Route index element={<EventIndexRoute />} />
-                <Route path="vender" element={<EventSellerDeskPage />} />
+        <Sentry.ErrorBoundary fallback={<NotFoundPage />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/" element={<HomeRoute />} />
+            <Route element={<RequireAuth />}>
+              <Route element={<AppShell />}>
+                <Route path="events" element={<EventsDashboardPage />} />
                 <Route
-                  path="vendedores"
+                  path="events/new"
                   element={
                     <NonSellerRoute>
-                      <EventSellersManagePage />
+                      <CreateEventPage />
                     </NonSellerRoute>
                   }
                 />
-                <Route
-                  path="edit"
-                  element={
-                    <NonSellerRoute>
-                      <EventEditPage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route
-                  path="rodada"
-                  element={
-                    <NonSellerRoute>
-                      <EventRoundPage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route
-                  path="prizes"
-                  element={
-                    <NonSellerRoute>
-                      <EventPrizesPage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route
-                  path="cards"
-                  element={
-                    <NonSellerRoute>
-                      <EventCardsPage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route path="participants" element={<EventParticipantsPage />} />
-                <Route path="sales" element={<EventSalesPage />} />
-                <Route path="sales/new" element={<EventSaleNewPage />} />
-                <Route path="sales/:saleId" element={<EventSaleDetailPage />} />
-                <Route
-                  path="finance"
-                  element={
-                    <NonSellerRoute>
-                      <EventFinancePage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route
-                  path="draw"
-                  element={
-                    <NonSellerRoute>
-                      <EventDrawPage />
-                    </NonSellerRoute>
-                  }
-                />
-                <Route
-                  path="winners"
-                  element={
-                    <NonSellerRoute>
-                      <EventWinnersPage />
-                    </NonSellerRoute>
-                  }
-                />
+                <Route path="events/:eventId" element={<EventWorkspaceRoute />}>
+                  <Route index element={<EventIndexRoute />} />
+                  <Route path="vender" element={<EventSellerDeskPage />} />
+                  <Route
+                    path="vendedores"
+                    element={
+                      <NonSellerRoute>
+                        <EventSellersManagePage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="edit"
+                    element={
+                      <NonSellerRoute>
+                        <EventEditPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="rodada"
+                    element={
+                      <NonSellerRoute>
+                        <EventRoundPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="prizes"
+                    element={
+                      <NonSellerRoute>
+                        <EventPrizesPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="cards"
+                    element={
+                      <NonSellerRoute>
+                        <EventCardsPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route path="participants" element={<EventParticipantsPage />} />
+                  <Route path="sales" element={<EventSalesPage />} />
+                  <Route path="sales/new" element={<EventSaleNewPage />} />
+                  <Route path="sales/:saleId" element={<EventSaleDetailPage />} />
+                  <Route
+                    path="finance"
+                    element={
+                      <NonSellerRoute>
+                        <EventFinancePage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="draw"
+                    element={
+                      <NonSellerRoute>
+                        <EventDrawPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                  <Route
+                    path="winners"
+                    element={
+                      <NonSellerRoute>
+                        <EventWinnersPage />
+                      </NonSellerRoute>
+                    }
+                  />
+                </Route>
               </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Sentry.ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );
